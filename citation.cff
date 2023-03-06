@@ -1,0 +1,8 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: Damato
+    given-names: Stefania
+title: "A formalisation of generalised containers in Cubical Agda"
+version: 0.1
+date-released: 2023-06-23

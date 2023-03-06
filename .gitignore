@@ -1,0 +1,11 @@
+*.agdai
+*~
+*.out
+*.aux
+*.pdf
+*.bbl
+*.blg
+*.ptb
+*.log
+*.tex
+.DS_Store

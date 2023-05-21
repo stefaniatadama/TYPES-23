@@ -195,7 +195,7 @@ module _ (spec : Spec) where
 
   β̅-comm : (y : Y) → out (β̅ y) ≡ ((βs y , β̅₁ ∘ (βh y)) , (βg y , λ i q → β̅₂ (βh y q) i))
   β̅-comm y =
-    ΣPathP (ΣPathP (refl , refl) , ΣPathP (funExt (λ i → funExt λ p → {!!}) , {!!})) -- TODO, this should uses initiality of Pos 
+    ΣPathP (ΣPathP (refl , refl) , ΣPathP (funExt (λ i → funExt λ p → {!!}) , {!!})) -- TODO, this should use initiality of Pos 
 
 
 

@@ -115,7 +115,7 @@ module _ (I : Type) (J : Type) (isSetJ : isSet J) where
 
       ret' : (a : ⟦ IC ⟧-i A j) → from (to a) ≡ a
       fst (ret' (s , f) i) = transportRefl s i
-      snd (ret' (s , f) i) i' = mjo i
+      snd (ret' (s , f) i) i' = path i
         where
-          mjo : PathP (λ i → P IC j (transportRefl s i) i' → A i') (snd (from (to (s , f))) i') (f i')
-          mjo = toPathP (funExt λ p → transportRefl _ ∙ cong (f i') (transportTransport⁻ (λ i₁ → P IC j (transport-filler (λ i₂ → S IC j) s (~ i₁)) i') p))
+          path : PathP (λ i → P IC j (transportRefl s i) i' → A i') (snd (from (to (s , f))) i') (f i')
+          path = toPathP (funExt λ p → transportRefl _ ∙ cong (f i') (transportTransport⁻ (λ i₁ → P IC j (transport-filler (λ i₂ → S IC j) s (~ i₁)) i') p))

@@ -1,4 +1,4 @@
-{-# OPTIONS --without-K --guardedness --cubical #-}
+{-# OPTIONS --without-K --guardedness --cubical --allow-unsolved-metas #-}
 
 module InductiveContainers where
 

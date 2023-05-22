@@ -7,4 +7,4 @@ Supplementary artefacts for TYPES 2023. Typechecked using Agda 2.6.3 and Cubical
 - **InductiveContainers.agda**: (WIP) Formalisation of the proofs that ordinary container functors are closed under fixed points, i.e. fixed points of container functors are themselves container functors. Proofs taken from [Containers: Constructing strictly positive types](https://www.sciencedirect.com/science/article/pii/S0304397505003373).
 - **IndexedGeneralised.agda**: Proof that indexed containers are a special case of generalised containers.
 
-An HTML rendering of this code can be found [here](https://stefaniatadama.com/agda_html/GeneralisedContainers.html).
+An HTML rendering of this code can be found [here](https://stefaniatadama.com/agda_html/README.html).

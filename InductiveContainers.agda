@@ -7,8 +7,6 @@ module InductiveContainers where
 -- Formalisation of Prop. 5.3 and Prop. 5.4 from
 -- 'Containers: Constructing strictly positive types'
 
-open import Cubical.Core.Everything
-
 open import Cubical.Data.Sigma
 open import Cubical.Data.Sum
 open import Cubical.Data.Nat
@@ -78,8 +76,10 @@ module _ (spec : Spec) where
   MAlg : ContFuncAlg S Q
   MAlg = alg (M S Q) sup-M
 
-  has-iso-M : isIso (uncurry (MAlg .χ))
-  has-iso-M = {!!} -- TODO show sup-M is an iso using Lambek's lemma
+  -- we have (propositional) η equality for M in Cubical Agda
+  M-eta-eq : (m : M S Q) → sup-M (shape m) (pos m) ≡ m
+  shape (M-eta-eq m i) = shape m
+  pos (M-eta-eq m i) = pos m
   
   data Pos (FP : ContFuncAlg S Q) (i : Ind) : Z FP → Set where
     here : {s : S} {f : Q s → Z FP} → P i s → Pos FP i ((χ FP) s f)
@@ -128,15 +128,14 @@ module _ (spec : Spec) where
   -- This is out from our paper or α⁻¹ in Prop 5.4
   out : Σ (M S Q) (λ m → (i : Ind) → Pos MAlg i m → X i) →
         Σ (Σ S (λ s → Q s → M S Q))
-           (λ {(s , f) → ((i : Ind) → P i s → X i) × ((i : Ind) (q : Q s) → Pos MAlg i (f q) → X i)})
-  out (m , k) with has-iso-M
-  out (m , k) | f⁻¹ , η , _ = f⁻¹ m , (g₁ , g₂) 
+          (λ {(s , f) → ((i : Ind) → P i s → X i) × ((i : Ind) (q : Q s) → Pos MAlg i (f q) → X i)})
+  out (m , k) = (shape m , pos m) , (g₁ , g₂)
     where
-      g₁ : (i : Ind) → P i (fst (f⁻¹ m)) → X i
-      g₁ i p = k i (transport (cong (Pos MAlg i) (η m)) (here p))
-      
-      g₂ : (i : Ind) (q : Q (fst (f⁻¹ m))) → Pos MAlg i (snd (f⁻¹ m) q) → X i
-      g₂ i q b = k i (transport (cong (Pos MAlg i) (η m)) (below q b))
+      g₁ : (i : Ind) → P i (shape m) → X i
+      g₁ i p = k i (transport (cong (Pos MAlg i) (M-eta-eq m)) (here p))
+
+      g₂ : (i : Ind) (q : Q (shape m)) → Pos MAlg i (pos m q) → X i
+      g₂ i q b = k i (transport (cong (Pos MAlg i) (M-eta-eq m)) (below q b))
 
   β̅₁ : Y → M S Q
   β̅₁ y = M-coiter S Q Y βs βh y

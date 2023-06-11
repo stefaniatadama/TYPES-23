@@ -96,7 +96,8 @@ module Conts {C : Category ℓ ℓ'} where
         (λ _ → snd s₂)
         i j
    
-    cont-mor : {A : Type ℓ'} {B : A → ob C} {X Y : ob C} (f : C [ X , Y ]) → cont-func A B X → cont-func A B Y
+    cont-mor : {A : Type ℓ'} {B : A → ob C} {X Y : ob C} (f : C [ X , Y ]) →
+               cont-func A B X → cont-func A B Y
     cont-mor f (s , g) = s , (g ⋆⟨ C ⟩ f)
 
     ⟦_⟧-obj : Container C → Functor C (SET ℓ')
@@ -143,3 +144,15 @@ module Conts {C : Category ℓ ℓ'} where
                   F-seq = ⟦_⟧-comp
                  }
               
+-- Example
+
+open Conts {C = SET (ℓ-zero)}
+
+open import Cubical.Data.Nat
+open import Cubical.Data.Fin
+
+ListC : Container (SET (ℓ-zero))
+ListC = ℕ ◁ (λ n → Fin n , isSetFin) & isSetℕ
+
+ListF : Functor (SET (ℓ-zero)) (SET (ℓ-zero))
+ListF = ⟦ ListC ⟧-obj

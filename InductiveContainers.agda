@@ -85,23 +85,21 @@ module _ (spec : Spec) where
     here : {s : S} {f : Q s → Z FP} → P i s → Pos FP i ((χ FP) s f)
     below : {s : S} {f : Q s → Z FP} → (q : Q s) → Pos FP i (f q) → Pos FP i ((χ FP) s f)
 
-  Pos-rec : (FP : ContFuncAlg S Q) (i : Ind) →
-            (M : Z FP → Set) →
-            (h : {s : S} {f : Q s → Z FP} → P i s →
-                  M ((χ FP) s f)) →
-            (b : {s : S} {f : Q s → Z FP} (q : Q s) → M (f q) →
-                  M ((χ FP) s f)) →
-            (z : Z FP) → Pos FP i z → M z
-  Pos-rec FP i M h b .((χ FP) s f) (here {s} {f} p) = h p
-  Pos-rec FP i M h b .((χ FP) s f) (below {s} {f} q pos) = b q (Pos-rec FP i M h b (f q) pos)
+  Pos-rec : (FP : ContFuncAlg S Q) (i : Ind) (M : (z : Z FP) → Pos FP i z → Set)
+             (h : {s : S} {f : Q s → Z FP} (p : P i s) → M ((χ FP) s f) (here p))
+             (b : {s : S} {f : Q s → Z FP} (q : Q s) {b : Pos FP i (f q)} →
+              M (f q) b → M ((χ FP) s f) (below q b)) →
+             (z : Z FP) (pos : Pos FP i z) → M z pos
+  Pos-rec FP i M h b .(χ FP _ _) (here {s} {f} p) = h p
+  Pos-rec FP i M h b .(χ FP _ _) (below {s} {f} q pos) = b q (Pos-rec FP i M h b (f q) pos)
 
   -- Initial algebra proof
 
-  -- This is in from our paper or α from Prop 5.3
-  ini : Σ (Σ S (λ s → Q s → W S Q))
-           (λ {(s , f) → ((i : Ind) → P i s → X i) × ((i : Ind) (q : Q s) → Pos WAlg i (f q) → X i)}) →
-        Σ (W S Q) (λ w → (i : Ind) → Pos WAlg i w → X i)  
-  ini ((s , f) , (g , h)) = sup-W s f , λ i → λ {(here p) → g i p ; (below q b) → h i q b}
+  -- This is into from our paper or α from Prop 5.3
+  into : Σ (Σ S (λ s → Q s → W S Q))
+            (λ {(s , f) → ((i : Ind) → P i s → X i) × ((i : Ind) (q : Q s) → Pos WAlg i (f q) → X i)}) →
+         Σ (W S Q) (λ w → (i : Ind) → Pos WAlg i w → X i)  
+  into ((s , f) , (g , h)) = sup-W s f , λ i → λ {(here p) → g i p ; (below q b) → h i q b}
 
   -- This is α̅ from our paper or β̅ in Prop 5.3
   α̅ : Σ (W S Q) (λ w → (i : Ind) → Pos WAlg i w → X i) → Y
@@ -120,18 +118,18 @@ module _ (spec : Spec) where
 
   -- Diagram commutes 
   α̅-comm : (s : S) (f : Q s → W S Q) (g : (i : Ind) → P i s → X i) (h : (i : Ind) (q : Q s) → Pos WAlg i (f q) → X i) →
-           α̅ (ini ((s , f) , (g , h))) ≡ α (s , g , λ q → α̅ (f q , λ i → h i q))
+           α̅ (into ((s , f) , (g , h))) ≡ α (s , g , λ q → α̅ (f q , λ i → h i q))
   α̅-comm s f g h = refl
 
   -- α̅ is unique
   α̅-unique : (α̃ : Σ (W S Q) (λ w → (i : Ind) → Pos WAlg i w → X i) → Y) →
              ((s : S) (f : Q s → W S Q) (g : (i : Ind) → P i s → X i) (h : (i : Ind) (q : Q s) → Pos WAlg i (f q) → X i) →
-             α̃ (ini ((s , f) , (g , h))) ≡ α (s , g , λ q → α̃ (f q , λ i → h i q))) →
+             α̃ (into ((s , f) , (g , h))) ≡ α (s , g , λ q → α̃ (f q , λ i → h i q))) →
              α̅ ≡ α̃
   α̅-unique α̃ α̃-comm = funExt w-rec
     where
       lemma : (s : S) (f : Q s → W S Q) (g : (i : Ind) → Pos WAlg i (sup-W s f) → X i) →
-              α̃ (ini ((s , f) , (λ i p₁ → g i (here p₁)) , (λ i q b → g i (below q b)))) ≡ α̃ (sup-W s f , g)
+              α̃ (into ((s , f) , (λ i p₁ → g i (here p₁)) , (λ i q b → g i (below q b)))) ≡ α̃ (sup-W s f , g)
       lemma s f g = cong₂ (λ w fun → α̃ (w , fun)) refl (funExt λ i → funExt (λ {(here p) → refl ; (below q b) → refl}))
 
       w-rec : (x : Σ (W S Q) (λ w → (i : Ind) → Pos WAlg i w → X i)) → α̅ x ≡ α̃ x
@@ -167,50 +165,50 @@ module _ (spec : Spec) where
   β̅₂ : (y : Y) → (i : Ind) → Pos MAlg i (β̅₁ y) → X i
   β̅₂ y i p = aux p (y , refl)
     where
-      aux : Pos MAlg i (β̅₁ y) → Σ Y (λ y' → β̅₁ y' ≡ β̅₁ y) → X i
-      aux = Pos-rec MAlg i (λ m → Σ Y (λ y → β̅₁ y ≡ m) → X i) h b (β̅₁ y) -- using initiality of Pos
+      h : {s : S} {f : Q s → Z MAlg} (p' : P i s) → Σ Y (λ y' → β̅₁ y' ≡ (χ MAlg) s f) → X i
+      h {s} {f} p' (y , eq) = βg y i (subst (P i) shape-eq p')
         where
-           h : {s : S} {f : Q s → Z MAlg} → P i s → Σ Y (λ y' → β̅₁ y' ≡ χ MAlg s f) → X i
-           h {s} {f} p (y , eq) = βg y i (subst (P i) shape-eq p)
-             where
-               shape-eq : s ≡ shape (β̅₁ y)
-               shape-eq = cong shape (sym eq)
+          shape-eq : s ≡ shape (β̅₁ y)
+          shape-eq = cong shape (sym eq)
 
-           b : {s : S} {f : Q s → Z MAlg} (q : Q s) → (Σ Y (λ y₁ → β̅₁ y₁ ≡ f q) → X i) →
-               Σ Y (λ y₁ → β̅₁ y₁ ≡ χ MAlg s f) → X i
-           b {s} {f} q g (y , eq) =  g (βh y (transport pos-eq q) ,
-                                     sym (funExt⁻Dep {A = λ i → pos-eq i}
-                                                     {B = M S Q}
-                                                     {transport pos-eq}
-                                                     pos-eq
-                                                     arg-path
-                                                     {f = f} {g = pos (β̅₁ y)}
-                                                     fun-path q)) 
-             where
-               shape-eq : s ≡ shape (β̅₁ y)
-               shape-eq = cong shape (sym eq)
+      b : {s : S} {f : Q s → Z MAlg} (q : Q s) {b : Pos MAlg i (f q)} →
+          (Σ Y (λ y' → β̅₁ y' ≡ f q) → X i) →
+          Σ Y (λ y' → β̅₁ y' ≡ χ MAlg s f) → X i
+      b {s} {f} q {b} g (y , eq) = g (βh y (transport pos-eq q) ,
+                                      sym (funExt⁻Dep {A = λ i → pos-eq i}
+                                                      {B = M S Q}
+                                                      {transport pos-eq}
+                                                      pos-eq
+                                                      arg-path
+                                                      {f = f} {g = pos (β̅₁ y)}
+                                                      fun-path q))
+        where
+          shape-eq : s ≡ shape (β̅₁ y)
+          shape-eq = cong shape (sym eq)
 
-               pos-eq : Q s ≡ Q (βs y) 
-               pos-eq = cong Q shape-eq
+          pos-eq : Q s ≡ Q (βs y) 
+          pos-eq = cong Q shape-eq
 
-               fun-path : PathP (λ i → Q (shape-eq i) → M S Q) f (pos (β̅₁ y)) 
-               fun-path = cong pos (sym eq)
+          fun-path : PathP (λ i → Q (shape-eq i) → M S Q) f (pos (β̅₁ y)) 
+          fun-path = cong pos (sym eq)
 
-               arg-path : (q : Q s) → PathP (λ i → pos-eq i) q (transport pos-eq q)
-               arg-path q = (transport-filler pos-eq q)
+          arg-path : (q : Q s) → PathP (λ i → pos-eq i) q (transport pos-eq q)
+          arg-path q = (transport-filler pos-eq q)
 
-               funExt⁻Dep : {A : I → Type} {B : Type ℓ} {transf : A i0 → A i1}
-                            (shape-eq : A i0 ≡ A i1)
-                            (fun-path : (a : A i0) → PathP (λ i → shape-eq i) a (transf a)) 
-                            {f : (x : A i0) → B} {g : (x : A i1) → B}
-                            → PathP (λ i → shape-eq i → B) f g
-                            → ((x : shape-eq i0) → f x ≡ g (transf x))
-               funExt⁻Dep shape-eq fun-path p x i = p i (fun-path x i)    
+          funExt⁻Dep : {A : I → Type} {B : Type ℓ} {transf : A i0 → A i1}
+                       (pos-eq : A i0 ≡ A i1)
+                       (arg-path : (a : A i0) → PathP (λ i → pos-eq i) a (transf a)) 
+                       {f : (x : A i0) → B} {g : (x : A i1) → B}
+                       → PathP (λ i → pos-eq i → B) f g
+                       → ((x : pos-eq i0) → f x ≡ g (transf x))
+          funExt⁻Dep pos-eq arg-path p x i = p i (arg-path x i)   
+
+      aux : Pos MAlg i (β̅₁ y) → Σ Y (λ y' → β̅₁ y' ≡ β̅₁ y) → X i
+      aux = Pos-rec MAlg i (λ m pos → Σ Y (λ y → β̅₁ y ≡ m) → X i) h b (β̅₁ y)
 
   -- This is β̅ from our paper or β̅ in Prop 5.4
   β̅ : Y → Σ (M S Q) (λ m → (i : Ind) → Pos MAlg i m → X i)
   β̅ y = β̅₁ y , β̅₂ y
-
 
   β̅-comm : (y : Y) → out (β̅ y) ≡ ((βs y , β̅₁ ∘ (βh y)) , (βg y , λ i q → β̅₂ (βh y q) i))
   β̅-comm y =

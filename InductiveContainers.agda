@@ -8,7 +8,7 @@ open import Cubical.Foundations.Prelude
 open import Cubical.Foundations.Function
 open import Cubical.Foundations.Isomorphism
 open import Cubical.Foundations.Transport
-open import Cubical.Foundations.Path
+open import Cubical.Foundations.Path hiding (inspect)
 
 -- Preamble
 
@@ -16,6 +16,13 @@ private
   variable
     a ℓ : Level
     A B C : Set a
+
+-- Custom inspect
+data Singleton {A : Set} (x : A) : Set where
+  _with≡_ : (y : A) → x ≡ y → Singleton x
+
+inspect : ∀ {A : Set} (x : A) → Singleton x
+inspect x = x with≡ refl
 
 data W (S : Set) (P : S → Set) : Set where
   sup-W : (s : S) → (P s → W S P) → W S P
@@ -187,7 +194,7 @@ module _ (spec : Spec) where
   shape (β̅₁ y) = βs y 
   pos (β̅₁ y) = β̅₁ ∘ (βh y) 
 
-  β̅₂ : (y : Y) → (i : Ind) → Pos MAlg i (β̅₁ y) → X i
+  β̅₂ : (y : Y) (i : Ind) → Pos MAlg i (β̅₁ y) → X i
   β̅₂ y i (here p) = βg y i p
   β̅₂ y i (below q p) = β̅₂ (βh y q) i p
 
@@ -198,54 +205,148 @@ module _ (spec : Spec) where
   β̅-comm : (y : Y) → out (β̅ y) ≡ ((βs y , β̅₁ ∘ (βh y)) , (βg y , λ i q → β̅₂ (βh y q) i))
   β̅-comm y = ΣPathP (refl , refl)
 
-  β̅-unique : (β̃ : Y → Σ (M S Q) (λ m → (i : Ind) → Pos MAlg i m → X i)) → 
-             ((y : Y) → out (β̃ y) ≡
-                        ((βs y , λ q → fst (β̃ (βh y q))) , (βg y , λ i q → snd (β̃ (βh y q)) i))) →
-             (y : Y) → β̃ y ≡ β̅ y
-  β̅-unique β̃ comm y = ΣPathP (fst-eq , {!!}) -- TODO: second part of proof
-    where
+  module _ (β̃₁ : Y → M S Q) (β̃₂ : (y : Y) (ind : Ind) → Pos MAlg ind (β̃₁ y) → X ind)
+           (comm : (y : Y) →
+                   out (β̃₁ y , β̃₂ y) ≡
+                   ((βs y , λ q → (β̃₁ (βh y q))) , (βg y , λ i q → (β̃₂ (βh y q)) i))) where
+
+      β̃ : Y → Σ (M S Q) (λ m → (i : Ind) → Pos MAlg i m → X i)
+      β̃ y = β̃₁ y , β̃₂ y
+
+      ----------
+
       data R : M S Q → M S Q → Set where
-        R-intro : (y : Y) → R (fst (β̃ y)) (β̅₁ y)
+        R-intro : (y : Y) → R (β̃₁ y) (β̅₁ y)
 
-      eq-pos : (y : Y) → PathP (λ i → (a : Q (fst (PathPΣ (fst (PathPΣ (comm y)))) i)) → M S Q)
-                               (pos (fst (β̃ y))) (λ q → fst (β̃ (βh y q)))
-      eq-pos y' = snd (PathPΣ (fst (PathPΣ (comm y'))))
+      unique-s : (y : Y) → shape (β̃₁ y) ≡ shape (β̅₁ y)
+      unique-s y i = fst (fst (comm y i))
 
-      eq-pos-app : (y : Y)
-                   {q0 : Q (fst (PathPΣ (fst (PathPΣ (comm y)))) i0)}
-                   {q1 : Q (fst (PathPΣ (fst (PathPΣ (comm y)))) i1)} →
-                   PathP (λ i → Q (fst (PathPΣ (fst (PathPΣ (comm y)))) i)) q0 q1 →
-                   pos (fst (β̃ y)) q0 ≡ fst (β̃ (βh y q1))
-      eq-pos-app y' q-eq i = eq-pos y' i (q-eq i)
+      unique-pos : (y : Y) →
+                   PathP (λ i → Q (unique-s y i) → M S Q)
+                         (pos (β̃₁ y)) (λ q → β̃₁ (βh y q))
+      unique-pos y i = snd (fst (comm y i))
+
+      unique-pos-app : (y : Y)
+                       {q0 : Q (unique-s y i0)} {q1 : Q (unique-s y i1)} →
+                       PathP (λ i → Q (unique-s y i)) q0 q1 →
+                       pos (β̃₁ y) q0 ≡ β̃₁ (βh y q1)
+      unique-pos-app y' q-eq i = unique-pos y' i (q-eq i)
 
       is-bisim-R : {m₀ : M S Q} {m₁ : M S Q} → R m₀ m₁ → M-R R m₀ m₁
-      s-eq (is-bisim-R (R-intro y')) = fst (PathPΣ (fst (PathPΣ (comm y'))))
-      p-eq (is-bisim-R (R-intro y')) q₀ q₁ q-eq =
-        subst (λ X → R X (β̅₁ (βh y' q₁))) (sym (eq-pos-app y' q-eq)) (R-intro (βh y' q₁))
+      s-eq (is-bisim-R (R-intro y)) = unique-s y
+      p-eq (is-bisim-R (R-intro y)) q₀ q₁ q-eq = transport (λ i → R (unique-pos y (~ i) (q-eq (~ i))) (β̅₁ (βh y q₁))) (R-intro (βh y q₁))
+        --subst (λ X → R X (β̅₁ (βh y q₁))) (sym (unique-pos-app y q-eq)) (R-intro (βh y q₁))
 
-      fst-eq : fst (β̃ y) ≡ β̅₁ y
-      fst-eq = CoInd-M {S} {Q} R is-bisim-R (R-intro y)
+      fst-eq : (y : Y) → β̃₁ y ≡ β̅₁ y
+      fst-eq y = CoInd-M {S} {Q} R is-bisim-R (R-intro y)
 
-{-
-      unique-s : (y : Y) → shape (fst (β̃ y)) ≡ shape (β̅₁ y)
-      unique-s y = fst (PathPΣ (fst (PathPΣ (comm y))))
-
-      unique-p : (y : Y) → PathP (λ i → Q (unique-s y i) → M S Q)
-                                 (pos (fst (β̃ y))) (λ q → fst (β̃ (βh y q)))
-      unique-p y = snd (PathPΣ (fst (PathPΣ (comm y))))
+      --------
 
       thr-β̃-comm : (y : Y) → PathP (λ i → (ind : Ind) → P ind (unique-s y i) → X ind)
-                                   (λ ind p → snd (β̃ y) ind (here p))
-                                   (βg y)
+                               (λ ind p → β̃₂ y ind (here p))
+                               (βg y)
       thr-β̃-comm y i = fst (snd (comm y i))
 
       fou-β̃-comm : (y : Y) →
                    PathP (λ i → (ind : Ind) → (q : Q (unique-s y i)) →
-                          Pos MAlg ind ((unique-p y i) q) → X ind)
-                         (λ ind q b → snd (β̃ y) ind (below q b))
-                         (λ ind q → snd (β̃ (βh y q)) ind)
-      fou-β̃-comm y i = snd (snd (comm y i))
+                          Pos MAlg ind (unique-pos y i q) → X ind)
+                         (λ ind q b → β̃₂ y ind (below q b))
+                         (λ ind q b → β̃₂ (βh y q) ind b)
+      fou-β̃-comm y i = snd (snd (comm y i))             
 
-      snd-eq : PathP (λ i → (ind : Ind) → Pos MAlg ind (fst-eq i) → X ind) (snd (β̃ y)) (β̅₂ y)
-      snd-eq = {!!}
+      module fs (yy : Y) where
+        f-s : M S Q
+        f-s = (β̃₁ yy)
+
+        g-s : M S Q
+        g-s = (β̅₁ yy)
+
+        fg-s-eq : f-s ≡ g-s
+        fg-s-eq = fst-eq yy
+
+        f : (ind : Ind) → Pos MAlg ind f-s → X ind
+        f = (β̃₂ yy)
+
+        g : (ind : Ind) → Pos MAlg ind g-s → X ind
+        g = (β̅₂ yy)  
+
+      open fs
+
+      snd-eq : (y : Y) → PathP (λ i → (ind : Ind) → Pos MAlg ind (fg-s-eq y i) → X ind) (f y) (g y)
+      snd-eq y i ind (here p) = thr-β̃-comm y i ind p
+      snd-eq y i ind (below q p) = {!!}
+      -- use fou-β̃-comm and snd-eq on (βh y q)
+      -- {!funExt⁻ (funExt⁻ (funExt⁻ (fromPathP (fou-β̃-comm y)) ind) q1) ? ∙ funExt⁻ (funExt⁻ (fromPathP⁻ (snd-eq (βh y q1))) ind) ?!}
+      -- I think this is now a 'transport hell' problem
+        where
+          QQ : I → Set
+          QQ j = Q (fst (fst (comm y j))) --Q (unique-s y j)
+
+          q0 : Q (shape (β̃₁ y))  --QQ i0
+          q0 = transp (λ j → QQ (i ∧ ~ j)) (~ i) q
+          
+          q1 : Q (βs y) --QQ i1
+          q1 = transp (λ j → QQ (j ∨ i)) i q
+
+          q≡ : PathP (λ i → QQ i) q0 q1
+          q≡ k = transp (λ j → QQ ((~ k ∧ ~ j ∧ i) ∨ (k ∧ (j ∨ i)) ∨
+                 ((~ j ∧ i) ∧ (j ∨ i)))) ((~ k ∧ ~ i) ∨ (k ∧ i)) q
+
+          PP : I → Set
+          PP j = Pos MAlg ind (unique-pos y j (q≡ j))
+
+          p0 : Pos MAlg ind (pos (β̃₁ y) q0)
+          p0 = {!!}
+
+          p1 : Pos MAlg ind (β̅₁ (βh y q1))
+          p1 = {!!}
+
+          need : PathP (λ i → X ind) (β̃₂ y ind (below q0 p0)) (β̅₂ (βh y q1) ind p1)
+          need j = {!!}
+
+      --------
+
+      β̅-unique : (y : Y) → β̃ y ≡ β̅ y
+      β̅-unique y = ΣPathP (fst-eq y , snd-eq y)
+
+{-
+  -- This approach of non-generalised fst-eq and snd-eq, and renaming the functions to make snd-eq not hang on pattern matching, works, except that to prove snd-eq we need snd-eq in its full generality i.e. ∀ y : Y.
+          fst-eq : β̃₁ y ≡ β̅₁ y
+          fst-eq = CoInd-M {S} {Q} R is-bisim-R (R-intro y)
+
+          --------
+
+          f-s : M S Q
+          f-s = (β̃₁ y)
+
+          g-s : M S Q
+          g-s = (β̅₁ y)
+
+          fg-s-eq : f-s ≡ g-s
+          fg-s-eq = fst-eq 
+
+          f : (ind : Ind) → Pos MAlg ind f-s → X ind
+          f = (β̃₂ y)
+
+          g : (ind : Ind) → Pos MAlg ind g-s → X ind
+          g = (β̅₂ y)
+
+          {-
+          snd-eq : PathP (λ i → (ind : Ind) → Pos MAlg ind (fst-eq i) → X ind) (β̃₂ y) (β̅₂ y)
+          snd-eq i ind p = {!!}
+          -}
+
+          snd-eq : PathP (λ i → (ind : Ind) → Pos MAlg ind (fg-s-eq i) → X ind) f g
+          snd-eq i ind (here p) = thr-β̃-comm y i ind p
+          snd-eq i ind (below q p) = {!!} -- to prove this we need snd-eq to generalise over all y : Y
+-}
+         
+
+          -----
+          
+{-
+          snd-eq : PathP (λ i → (ind : Ind) → Pos MAlg ind (fg-s-eq i) → X ind)
+                   f g
+          snd-eq i ind (here p) = thr-β̃-comm y i ind p
+          snd-eq i ind (below q p) = {!!} -- to prove this we need snd-eq to generalise over all y : Y
 -}
